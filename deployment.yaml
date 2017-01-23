@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: hubot
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: hubot
+      labels:
+        name: hubot
+    spec:
+      containers:
+      - name: hubot
+        image: hackgt/hubot
+        env:
+        - name: HUBOT_SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hubot-secrets
+              key: slack-token
+        - name: HUBOT_REDISRED_URL
+          valueFrom:
+            secretKeyRef:
+              name: hubot-secrets
+              key: redisred-url
+        - name: HUBOT_REDISRED_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hubot-secrets
+              key: redisred-token
