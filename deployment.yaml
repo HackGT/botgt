@@ -1,18 +1,18 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: hubot
+  name: hackgt-hubot
 spec:
   replicas: 1
   template:
     metadata:
-      name: hubot
+      name: hackgt-hubot
       labels:
-        name: hubot
+        name: hackgt-hubot
     spec:
       containers:
       - name: hubot
-        image: hackgt/hubot
+        image: hackgt/hackgt-hubot
         env:
         - name: HUBOT_SLACK_TOKEN
           valueFrom:
