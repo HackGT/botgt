@@ -1,0 +1,10 @@
+git:
+    branch: master
+
+secrets:
+  - HUBOT_MAIL_LISTENER_USERNAME
+  - HUBOT_MAIL_LISTENER_PASSWORD
+  - HUBOT_SLACK_TOKEN
+  - HUBOT_MAIL_LISTENER_HOST
+env:
+  HUBOT_MAIL_LISTENER_ROOMS: "#devops-onfire"

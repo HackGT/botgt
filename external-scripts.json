@@ -5,6 +5,6 @@
   "hubot-redis-brain",
   "hubot-shipit",
   "hubot-conf",
-  "hubot-redisred",
-  "hubot-group"
+  "hubot-group",
+  "hubot-mail-listener"
 ]
