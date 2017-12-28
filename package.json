@@ -8,6 +8,7 @@
     "start": "./bin/hubot --adapter slack"
   },
   "dependencies": {
+    "coffee-script": "^1.12.7",
     "hubot": "^2.19.0",
     "hubot-conf": "^1.2.1",
     "hubot-diagnostics": "0.0.1",
