@@ -56,12 +56,11 @@ module.exports = (robot) ->
           varsTemp.slack.channels.push tokens[i].substr 1
         else
           foundChannels = true
-      if foundChannels
-        if !foundMediums
-          if tokens[i][0] == "!"
-            mediums.push tokens[i].substr 1
-          else
-            foundMediums = true
+      if foundChannels && !foundMediums
+        if tokens[i][0] == "!"
+          mediums.push tokens[i].substr 1
+        else
+          foundMediums = true
       if foundChannels && foundMediums
         vars.msg.push tokens[i]
       i++
