@@ -2,66 +2,78 @@
 #   Notifications for botgt
 # Commands:
 #   hubot notify <message> - notify everyone with something
-#   hubot notify "@group1 ... @groupn" "#medium1 ... #mediumn" <message>  - notify certain groups with something groups and mediums are optional but order matters (do not mix groups and mediums)
+#   hubot notify "@group1 ... @groupn" "#medium1 ... #mediumn" <message>  - notify certain channels with something channels and mediums are optional but order matters (do not mix channels and mediums)
 # Author:
 #   Jacob Zipper
 
 gqlReq = require "graphql-request"
+adminKey = (new Buffer process.env.BUZZER_ADMIN_KEY_SECRET).toString 'base64'
+client = new gqlReq.GraphQLClient("http://buzzer.hack.gt/graphql", {
+  headers: {
+    Authorization: adminKey,
+  },
+})
 
-query = '{
-  send_message(message: ${msg}, plugins: {
-    console: {
-      groups: ${groups}
-    }
-  })
-  {
-    console {
-      error
-      key
-      message
-    }
-  }
-}'
 
-vars = {
-  "msg": null,
-  "groups": null
-}
-
-processTemplateStr = (template, vars) ->
-  Object.keys vars
-  .forEach (key) ->
-    template = template.replace "${" + key + "}", JSON.stringify vars[key]
-  return template
 
 module.exports = (robot) ->
   robot.respond /notify (.*)/i, (res) ->
     tokens = res.match[1].split " "
     i = 0
-    groups = []
+    channels = []
     mediums = []
     msg = []
-    foundGroups = false
+    vars = {
+      msg: "",
+      mediums: [],
+      twitterConfig: {},
+      facebookConfig: {},
+      slackConfig: {
+        channels: [],
+      },
+      livesiteConfig: {}
+    }
+    query = '{
+      send_message(message: $msg, plugins: {\n'
+    midQuery = '
+      })
+      {\n'
+    pluginReturn = ' {\nerror\nkey\nmessage\n}'
+    endQuery = '}\n}'
+    foundChannels = false
     foundMediums = false
     while i < tokens.length
-      if !foundGroups
+      if !foundChannels
         if tokens[i][0] == "@"
-          groups.push tokens[i].substr 1
+          channels.push tokens[i].substr 1
         else
-          foundGroups = true
-      if foundGroups
+          foundChannels = true
+      if foundChannels
         if !foundMediums
           if tokens[i][0] == "#"
             mediums.push tokens[i].substr 1
           else
             foundMediums = true
-      if foundGroups && foundMediums
+      if foundChannels && foundMediums
         msg.push tokens[i]
       i++
     msg = msg.join " "
     vars["msg"] = msg
-    vars["groups"] = groups
-    query = processTemplateStr query, vars
-    gqlReq.request "http://localhost:3000/graphql", query
+    vars["slackConfig"]["channels"] = channels
+    for medium in mediums
+      query += medium + ": $" + medium + "Config,\n"
+    if mediums.length != 0
+      query = query.slice 0, query.length - 2
+      query += '\n'
+    query += midQuery
+    for m in mediums
+      query += m + pluginReturn + ",\n"
+    if mediums.length != 0
+      query = query.slice 0, query.length - 2
+      query += '\n'
+    query += endQuery
+    console.log query
+    console.log vars
+    client.request query, vars
     .then (ret) ->
       res.reply ret["send_message"]["console"]["message"]

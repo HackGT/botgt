@@ -5,6 +5,10 @@ secrets:
   - HUBOT_MAIL_LISTENER_USERNAME
   - HUBOT_MAIL_LISTENER_PASSWORD
   - HUBOT_SLACK_TOKEN
+<<<<<<< HEAD
   - HUBOT_MAIL_LISTENER_HOST
 env:
   HUBOT_MAIL_LISTENER_ROOMS: "#devops-onfire"
+=======
+  - BUZZER_ADMIN_KEY_SECRET
+>>>>>>> c18982f... query building now working with channels and mediums
