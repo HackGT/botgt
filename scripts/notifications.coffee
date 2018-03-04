@@ -6,15 +6,19 @@
 # Author:
 #   Jacob Zipper
 
-gqlReq = require "graphql-request"
+request = require "request-promise"
 adminKey = (new Buffer process.env.BUZZER_ADMIN_KEY_SECRET).toString 'base64'
-client = new gqlReq.GraphQLClient("http://buzzer.hack.gt/graphql", {
-  headers: {
-    Authorization: adminKey,
+options = {
+  uri: 'https://buzzer.hack.gt/graphql',
+  qs: {
+    query: '',
+    variables: ''
   },
-})
-
-
+  headers: {
+    'Authorization': 'Basic ' + adminKey
+  },
+  json: true
+}
 
 module.exports = (robot) ->
   robot.respond /notify (.*)/i, (res) ->
@@ -25,21 +29,17 @@ module.exports = (robot) ->
     msg = []
     vars = {
       msg: "",
-      mediums: [],
-      twitterConfig: {},
-      facebookConfig: {},
-      slackConfig: {
+      plugins: {}
+    }
+    varsTemp = {
+      twitter: {},
+      facebook: {},
+      slack: {
         channels: [],
       },
-      livesiteConfig: {}
+      live_site: {}
     }
-    query = '{
-      send_message(message: $msg, plugins: {\n'
-    midQuery = '
-      })
-      {\n'
-    pluginReturn = ' {\nerror\nkey\nmessage\n}'
-    endQuery = '}\n}'
+    query = 'query ($msg: String!, $plugins: PluginMaster!){send_message(message: $msg, plugins: $plugins){plugin errors {error key message}}}'
     foundChannels = false
     foundMediums = false
     while i < tokens.length
@@ -59,21 +59,14 @@ module.exports = (robot) ->
       i++
     msg = msg.join " "
     vars["msg"] = msg
-    vars["slackConfig"]["channels"] = channels
+    varsTemp["slack"]["channels"] = channels
     for medium in mediums
-      query += medium + ": $" + medium + "Config,\n"
-    if mediums.length != 0
-      query = query.slice 0, query.length - 2
-      query += '\n'
-    query += midQuery
-    for m in mediums
-      query += m + pluginReturn + ",\n"
-    if mediums.length != 0
-      query = query.slice 0, query.length - 2
-      query += '\n'
-    query += endQuery
-    console.log query
-    console.log vars
-    client.request query, vars
+      vars["plugins"][medium] = varsTemp[medium]
+    options["qs"]["query"] = query
+    options["qs"]["variables"] = JSON.stringify vars
+    console.log JSON.stringify vars
+    request options
     .then (ret) ->
-      res.reply ret["send_message"]["console"]["message"]
+      res.reply JSON.stringify ret
+    .catch (err) ->
+      res.reply JSON.stringify err
