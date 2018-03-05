@@ -33,6 +33,8 @@ module.exports = (robot) ->
       facebook: {},
       slack: {
         channels: [],
+        at_channel: true,
+        at_here: false,
       },
       live_site: {}
     }
