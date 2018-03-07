@@ -99,7 +99,7 @@ module.exports = (robot) ->
         for errors in plugin.errors
           if errors.error
             errored = true
-            res.reply "There was a plugin error\n" + errors.message
+            res.reply "There was an error with " + plugin.plugin + "\n" + errors.message
       if ret.errors != undefined
         res.reply "There were some graphql errors"
         for error in ret.errors
