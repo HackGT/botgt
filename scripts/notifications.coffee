@@ -68,7 +68,7 @@ module.exports = (robot) ->
     vars = {
       msg: res.match[1],
       plugins: {
-#        twitter: {}
+        twitter: {}
         live_site: {}
         slack: {
           at_channel: true,
