@@ -22,7 +22,7 @@ QUERY = """
     }
 """
 
-MEDIUMS = ['slack', 'live_site']
+MEDIUMS = ['slack', 'live_site', 'twitter']
 
 GRAFANA = {
   hackgtmetricsversion: 1,
@@ -45,12 +45,11 @@ options = {
   json: true
 }
 
-
 validMedium = (medium) ->
   return medium in MEDIUMS
 
 module.exports = (robot) ->
-  robot.respond /mediums/i, (res) ->
+  robot.respond /notify mediums/i, (res) ->
     res.reply MEDIUMS.join ", "
 
   robot.respond /notify (.*)/i, (res) ->
@@ -105,11 +104,11 @@ module.exports = (robot) ->
       res.reply "Please supply a message.\nType botgt help if you need documentation for the bot."
       return
     if mediums.length == 0
-      res.reply "Please supply a medium.\nType botgt mediums for a list of valid mediums.\nType botgt help if you need documentation for the bot."
+      res.reply "Please supply a medium.\nType botgt notify mediums for a list of valid mediums.\nType botgt help if you need documentation for the bot."
       return
     for medium in mediums
       if not validMedium(medium)
-        res.reply medium + " is not a valid medium.\nType botgt mediums for a list of valid mediums.\nType botgt help if you need documentation for the bot."
+        res.reply medium + " is not a valid medium.\nType botgt notify mediums for a list of valid mediums.\nType botgt help if you need documentation for the bot."
         return
 
       # Add necessary configurations to vars
