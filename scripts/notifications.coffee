@@ -50,6 +50,33 @@ options = {
 validMedium = (medium) ->
   return medium in MEDIUMS
 
+grafana = (res, mediums, msg) ->
+  GRAFANA.tags.name = res.message.user.name
+  GRAFANA.values.query = res.message.text
+  GRAFANA.tags.mediums = mediums
+  GRAFANA.values.message = msg
+  console.log JSON.stringify GRAFANA
+
+doRequest = (vars) ->
+  options.qs.variables = JSON.stringify vars
+  request options
+  .then (ret) ->
+    errored = false
+    for plugin in ret.data.send_message
+      for errors in plugin.errors
+        if errors.error
+          errored = true
+          res.reply "There was an error with " + plugin.plugin + "\n" + errors.message
+    if ret.errors != undefined
+      res.reply "There were some graphql errors"
+      for error in ret.errors
+        res.reply error.message
+      res.reply "Here is some debug output\n\n" + JSON.stringify ret
+    else if not errored
+      res.reply "Your notification has sent successfully!\nHere's some debug output\n\n" + JSON.stringify ret
+  .catch (err) ->
+    res.reply "Due to a server error, your notification didn't send :(\nHere's some debug output\n\n" + JSON.stringify err
+
 module.exports = (robot) ->
 
   robot.respond /notify (.*)/i, (res) ->
@@ -79,11 +106,8 @@ module.exports = (robot) ->
     }
 
     # Grafana vars
-    GRAFANA.tags.name = res.message.user.name
-    GRAFANA.values.query = res.message.text
-    GRAFANA.tags.mediums = ['twitter', 'live_site', 'slack']
-    GRAFANA.values.message = vars.msg
-    console.log JSON.stringify GRAFANA
+    grafana(res, ['twitter', 'live_site', 'slack'], vars.msg)
+
 
     # Check for bad query
     if vars.msg.length == 0
@@ -91,28 +115,9 @@ module.exports = (robot) ->
       return
 
     # Do the request
-    options.qs.variables = JSON.stringify vars
-    request options
-    .then (ret) ->
-      errored = false
-      for plugin in ret.data.send_message
-        for errors in plugin.errors
-          if errors.error
-            errored = true
-            res.reply "There was an error with " + plugin.plugin + "\n" + errors.message
-      if ret.errors != undefined
-        res.reply "There were some graphql errors"
-        for error in ret.errors
-          res.reply error.message
-        res.reply "Here is some debug output\n\n" + JSON.stringify ret
-      else if not errored
-        res.reply "Your notification has sent successfully!\nHere's some debug output\n\n" + JSON.stringify ret
-    .catch (err) ->
-      res.reply "Due to a server error, your notification didn't send :(\nHere's some debug output\n\n" + JSON.stringify err
+    doRequest(vars)
 
   robot.respond /notify (.*)/i, (res) ->
-    GRAFANA.tags.name = res.message.user.name
-    GRAFANA.values.query = res.message.text
 
     # Tokenize query
     tokens = res.match[1].split " "
@@ -155,9 +160,7 @@ module.exports = (robot) ->
     vars.msg = vars.msg.join " "
 
     # Log for Grafana
-    GRAFANA.tags.mediums = mediums
-    GRAFANA.values.message = vars.msg
-    console.log JSON.stringify GRAFANA
+    grafana(res, mediums, vars.msg)
 
     # Checking for malformed query
     if vars.msg.length == 0
@@ -173,23 +176,5 @@ module.exports = (robot) ->
 
       # Add necessary configurations to vars
       vars.plugins[medium] = varsTemp[medium]
-    options.qs.variables = JSON.stringify vars
 
-    # Send request to server
-    request options
-    .then (ret) ->
-      errored = false
-      for plugin in ret.data.send_message
-        for errors in plugin.errors
-          if errors.error
-            errored = true
-            res.reply "There was a plugin error\n" + errors.message
-      if ret.errors != undefined
-        res.reply "There were some graphql errors"
-        for error in ret.errors
-          res.reply error.message
-        res.reply "Here is some debug output\n\n" + JSON.stringify ret
-      else if not errored
-        res.reply "Your notification has sent successfully!\nHere's some debug output\n\n" + JSON.stringify ret
-    .catch (err) ->
-      res.reply "Due to a server error, your notification didn't send :(\nHere's some debug output\n\n" + JSON.stringify err
+    doRequest(vars)
