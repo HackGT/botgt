@@ -84,7 +84,7 @@ module.exports = (robot) ->
     for preset in PRESETS
       if preset == 'mediums'
         continue
-      if msg.trim().lower() == preset
+      if msg.trim().toLowerCase() == preset
         res.reply "Please provide a message for your command"
         return
   robot.respond /notify mediums/i, (res) ->
