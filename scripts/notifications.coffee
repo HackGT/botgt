@@ -57,7 +57,7 @@ grafana = (res, mediums, msg) ->
   GRAFANA.values.message = msg
   console.log JSON.stringify GRAFANA
 
-doRequest = (vars) ->
+doRequest = (vars, res) ->
   options.qs.variables = JSON.stringify vars
   request options
   .then (ret) ->
@@ -115,7 +115,7 @@ module.exports = (robot) ->
       return
 
     # Do the request
-    doRequest(vars)
+    doRequest(vars, res)
 
   robot.respond /notify (.*)/i, (res) ->
 
@@ -177,4 +177,4 @@ module.exports = (robot) ->
       # Add necessary configurations to vars
       vars.plugins[medium] = varsTemp[medium]
 
-    doRequest(vars)
+    doRequest(vars, res)
