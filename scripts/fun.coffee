@@ -19,5 +19,6 @@ module.exports = (robot) ->
                             return false
                     return true
                 randomChoice = filteredList[Math.floor(Math.random() * filteredList.length)]
-                robot.adapter.client.web.reactions.add(randomChoice, {channel: res.message.item.channel, timestamp: res.message.item.ts})
+                if randomChoice
+                    robot.adapter.client.web.reactions.add(randomChoice, {channel: res.message.item.channel, timestamp: res.message.item.ts})
             )
