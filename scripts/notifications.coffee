@@ -22,7 +22,7 @@ QUERY = """
     }
 """
 
-MEDIUMS = ['slack', 'live_site', 'twitter']
+MEDIUMS = ['slack', 'live_site', 'twitter', 'twilio']
 
 GRAFANA = {
   hackgtmetricsversion: 1,
