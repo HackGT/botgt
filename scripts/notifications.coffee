@@ -40,7 +40,7 @@ GRAFANA = {
   tags: {}
 }
 
-PRESETS = ['buildgt', 'mediums', 'help']
+PRESETS = ['hackers', 'mediums', 'help']
 
 # Set up request
 adminKey = (Buffer.from process.env.BUZZER_ADMIN_KEY_SECRET).toString 'base64'
@@ -111,7 +111,7 @@ module.exports = (robot) ->
 e.g. --message Hello World --channel general tech --> "Hello World" used as --message arg for #general, #tech
     """
     res.reply helpStr
-  robot.respond /notify buildgt (.*)/i, (res) ->
+  robot.respond /notify hackers (.*)/i, (res) ->
     # Initialize buildgt config
     vars = {
       msg: res.match[1],

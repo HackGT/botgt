@@ -1,6 +1,7 @@
 git:
     branch: master
-
+env:
+    BUZZER_URI: https://buzzer.hack.gt/graphql
 secrets:
   - HUBOT_SLACK_TOKEN
   - BUZZER_ADMIN_KEY_SECRET
