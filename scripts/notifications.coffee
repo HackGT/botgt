@@ -40,7 +40,17 @@ GRAFANA = {
   tags: {}
 }
 
-PRESETS = ['hackers', 'mediums', 'help']
+PRESETS = ['hackers', 'mediums', 'help', 'approve', 'abort']
+
+CONTROL_CHANNEL_NAME = '#hackgt5_announcements'
+
+HELP_STR = """Available options: [channel, group, medium, message]
+--channel: For slack/channel based notifiers, name of the channels you want to notify
+--group: For registration group based notifiers (e.g. Twilio), name of the groups you want to notify, e.g. volunteers
+--medium: specify which mediums to use
+--message: Notification content here
+e.g. --message Hello World --channel general tech --> "Hello World" used as --message arg for #general, #tech
+    """
 
 # Set up request
 adminKey = (Buffer.from process.env.BUZZER_ADMIN_KEY_SECRET).toString 'base64'
@@ -60,7 +70,7 @@ validMedium = (medium) ->
   return medium in MEDIUMS
 
 grafana = (res, mediums, msg) ->
-  GRAFANA.tags.name = res.message.user.name
+  GRAFANA.tags.name = res.envelope.user.name
   GRAFANA.values.query = res.message.text
   GRAFANA.tags.mediums = mediums
   GRAFANA.values.message = msg
@@ -103,14 +113,44 @@ module.exports = (robot) ->
   robot.respond /notify mediums/i, (res) ->
     res.reply MEDIUMS.join ", "
   robot.respond /notify help/i, (res) ->
-    helpStr = """Available options: [channel, group, medium, message]
---channel: For slack/channel based notifiers, name of the channels you want to notify
---group: For registration group based notifiers (e.g. Twilio), name of the groups you want to notify, e.g. volunteers
---medium: specify which mediums to use
---message: Notification content here
-e.g. --message Hello World --channel general tech --> "Hello World" used as --message arg for #general, #tech
-    """
-    res.reply helpStr
+    res.reply HELP_STR
+  robot.respond /notify approve/i, (res) ->
+    message = robot.brain.get('pending')
+    if !message
+      doFail 'No pending message.', res
+      return
+    sender = robot.brain.get('sender')
+    approver = res.envelope.user.name
+    if sender == approver
+      doFail 'Cannot approve your own message.', res
+      return
+    else 
+      doRequest(JSON.parse(message), res)
+      robot.messageRoom CONTROL_CHANNEL_NAME, "Message approved by " + approver
+      robot.brain.set('pending', '')
+      robot.brain.set('sender', '')
+      res.reply 'Sending notification'
+
+  robot.respond /notify abort/i, (res) ->
+    message = robot.brain.get('pending')
+    if !message
+      doFail 'No pending message.', res
+      return
+    robot.brain.set('pending', '')
+    robot.brain.set('sender', '')
+    aborter = res.envelope.user.name
+    robot.messageRoom CONTROL_CHANNEL_NAME, "Message aborted by " + aborter
+    res.reply 'Aborting notification'
+
+  # Presets and general below
+  requestApproval = (vars, logDict, res) -> 
+    if (robot.brain.get('pending'))
+      robot.messageRoom CONTROL_CHANNEL_NAME, 'Warning: Overwriting old announcement (see last log above)'
+    robot.brain.set('pending', JSON.stringify(vars))
+    robot.messageRoom CONTROL_CHANNEL_NAME, "New notification pending. How's it look? (type `botgt notify approve` or `botgt notify abort`)"
+    robot.messageRoom CONTROL_CHANNEL_NAME, configToLog(logDict)
+    robot.brain.set('sender', res.envelope.user.name)
+
   robot.respond /notify hackers (.*)/i, (res) ->
     # Initialize buildgt config
     vars = {
