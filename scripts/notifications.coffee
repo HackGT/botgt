@@ -42,7 +42,7 @@ GRAFANA = {
 
 PRESETS = ['hackers', 'mediums', 'help', 'approve', 'abort']
 
-CONTROL_CHANNEL_NAME = 'bot-spam'#'#hackgt5_announcements'
+CONTROL_CHANNEL_NAME = 'hackgt5_announcements'
 
 HELP_STR = """Available options: [channel, group, medium, message]
 --channel: For slack/channel based notifiers, name of the channels you want to notify
