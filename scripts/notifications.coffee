@@ -4,6 +4,7 @@
 #   botgt notify mediums - returns list of possible mediums
 #   botgt notify help - more instructions on how to use general notifications
 #   botgt notify --<option1> op1arg1 op1arg2 --<option2> op2arg1
+#   botgt notify hackers - preset for slack, twitter, live site
 # Author:
 #   Jacob Zipper / Joel Ye
 
@@ -39,9 +40,9 @@ GRAFANA = {
   tags: {}
 }
 
-PRESETS = ['buildgt', 'mediums', 'help', 'approve', 'abort']
+PRESETS = ['hackers', 'mediums', 'help', 'approve', 'abort']
 
-CONTROL_CHANNEL_NAME = '#hackgt5_announcements'
+CONTROL_CHANNEL_NAME = 'bot-spam'#'#hackgt5_announcements'
 
 HELP_STR = """Available options: [channel, group, medium, message]
 --channel: For slack/channel based notifiers, name of the channels you want to notify
@@ -147,8 +148,18 @@ module.exports = (robot) ->
     aborter = res.message.user.name
     robot.messageRoom CONTROL_CHANNEL_NAME, "Message aborted by " + aborter
     res.reply 'Aborting notification'
-  robot.respond /notify buildgt (.*)/i, (res) ->
-    # Initialize buildgt config
+
+  # Presets and general below
+  requestApproval = (vars, logDict, res) -> 
+    if (robot.brain.get('pending'))
+      robot.messageRoom CONTROL_CHANNEL_NAME, 'Warning: Overwriting old announcement (see last log above)'
+    robot.brain.set('pending', JSON.stringify(vars))
+    robot.messageRoom CONTROL_CHANNEL_NAME, "New notification pending. How's it look? (type `botgt notify approve` or `botgt notify abort`)"
+    robot.messageRoom CONTROL_CHANNEL_NAME, configToLog(logDict)
+    robot.brain.set('sender', res.message.user.name)
+
+  robot.respond /notify hackers (.*)/i, (res) ->
+    # Initialize hackers config
     vars = {
       msg: res.match[1],
       plugins: {
@@ -162,6 +173,10 @@ module.exports = (robot) ->
       }
     }
 
+    logDict = {
+      msg: vars.msg,
+      mediums: ['slack', 'twitter', 'live_site']
+    }
     # Grafana vars
     grafana(res, ['twitter', 'live_site', 'slack'], vars.msg)
 
@@ -170,8 +185,8 @@ module.exports = (robot) ->
       doFail "Please supply a message.", res
       return
 
-    # Do the request
-    doRequest(vars, res)
+    robot.messageRoom CONTROL_CHANNEL_NAME, "[Hackers Preset]"
+    requestApproval(vars, logDict, res)
 
   robot.respond /notify (.*)/i, (res) ->
 
@@ -252,30 +267,5 @@ module.exports = (robot) ->
       # Add necessary configurations to vars
       vars.plugins[medium] = varsTemp[medium]
 
-    # Verify message:
-    robot.messageRoom CONTROL_CHANNEL_NAME, "New notification pending. How's it look? (type `botgt notify approve` or `botgt notify abort`)"
-    robot.messageRoom CONTROL_CHANNEL_NAME, configToLog(logDict)
-    robot.brain.set('pending', JSON.stringify(vars))
-    robot.brain.set('sender', res.envelope.user.name)
-    # robot.messageRoom VERIFY_CHANNEL_NAME, {
-    #   text: configToLog(logDict),
-    #   attachments: [{
-    #     text: "Send message?", 
-    #     actions: [
-    #       {
-    #           "name": "choice",
-    #           "text": "Approve",
-    #           "type": "button",
-    #           "value": "approve"
-    #       },
-    #       {
-    #           "name": "choice",
-    #           "text": "Abort",
-    #           "type": "button",
-    #           "value": "cancel"
-    #       }
-    #     ]
-    #   }]
-    # }
-    res.send ''
-    #  doRequest(vars, res)
+    requestApproval(vars, logDict, res)
+    
