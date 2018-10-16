@@ -4,6 +4,7 @@
 #   botgt notify mediums - returns list of possible mediums
 #   botgt notify help - more instructions on how to use general notifications
 #   botgt notify --<option1> op1arg1 op1arg2 --<option2> op2arg1
+#   botgt notify hackers - preset for slack, twitter, live site
 # Author:
 #   Jacob Zipper / Joel Ye
 
@@ -11,7 +12,6 @@
     TODO: fuzzy match options
     TODO: forbid repeated arguments (currently most recent args overwrites)
 ###
-
 
 request = require "request-promise"
 
@@ -40,7 +40,17 @@ GRAFANA = {
   tags: {}
 }
 
-PRESETS = ['hackers', 'mediums', 'help']
+PRESETS = ['hackers', 'mediums', 'help', 'approve', 'abort']
+
+CONTROL_CHANNEL_NAME = 'hackgt5_announcements'
+
+HELP_STR = """Available options: [channel, group, medium, message]
+--channel: For slack/channel based notifiers, name of the channels you want to notify
+--group: For registration group based notifiers (e.g. Twilio), name of the groups you want to notify, e.g. volunteers
+--medium: specify which mediums to use
+--message: Notification content here
+e.g. --message Hello World --channel general tech --> "Hello World" used as --message arg for #general, #tech
+    """
 
 # Set up request
 adminKey = (Buffer.from process.env.BUZZER_ADMIN_KEY_SECRET).toString 'base64'
@@ -65,6 +75,15 @@ grafana = (res, mediums, msg) ->
   GRAFANA.tags.mediums = mediums
   GRAFANA.values.message = msg
   console.log JSON.stringify GRAFANA
+
+configToLog = (logDict) ->
+  log = "Message: " + logDict.msg + "\n";
+  log += "Media: " + logDict.mediums + "\n";
+  if logDict.groups
+    log += "Groups:" + logDict.groups + "\n";
+  if logDict.channels
+    log += "Channels: " + logDict.channels + "\n";
+  return log
 
 failStr = " Type botgt notify help if you need documentation for Buzzer."
 doFail = (msg, res) ->
@@ -95,7 +114,7 @@ module.exports = (robot) ->
   robot.respond /notify (.*)/i, (res) ->
     msg = res.match[1]
     for preset in PRESETS
-      if preset == 'mediums' || preset == 'help'
+      if preset == 'mediums' || preset == 'help' || preset == 'approve' || preset == 'abort'
         continue
       if msg.trim().toLowerCase() == preset
         res.reply "Please provide a message for your command"
@@ -103,16 +122,44 @@ module.exports = (robot) ->
   robot.respond /notify mediums/i, (res) ->
     res.reply MEDIUMS.join ", "
   robot.respond /notify help/i, (res) ->
-    helpStr = """Available options: [channel, group, medium, message]
---channel: For slack/channel based notifiers, name of the channels you want to notify
---group: For registration group based notifiers (e.g. Twilio), name of the groups you want to notify, e.g. volunteers
---medium: specify which mediums to use
---message: Notification content here
-e.g. --message Hello World --channel general tech --> "Hello World" used as --message arg for #general, #tech
-    """
-    res.reply helpStr
+    res.reply HELP_STR
+  robot.respond /notify approve/i, (res) ->
+    message = robot.brain.get('pending')
+    if !message
+      doFail 'No pending message.', res
+      return
+    sender = robot.brain.get('sender')
+    approver = res.message.user.name
+    if sender == approver
+      doFail 'Cannot approve your own message.', res
+      return
+    else 
+      doRequest(JSON.parse(message), res)
+      robot.messageRoom CONTROL_CHANNEL_NAME, "Message approved by " + approver
+      res.reply 'Sending notification'
+
+  robot.respond /notify abort/i, (res) ->
+    message = robot.brain.get('pending')
+    if !message
+      doFail 'No pending message.', res
+      return
+    robot.brain.set('pending', '')
+    robot.brain.set('sender', '')
+    aborter = res.message.user.name
+    robot.messageRoom CONTROL_CHANNEL_NAME, "Message aborted by " + aborter
+    res.reply 'Aborting notification'
+
+  # Presets and general below
+  requestApproval = (vars, logDict, res) -> 
+    if (robot.brain.get('pending'))
+      robot.messageRoom CONTROL_CHANNEL_NAME, 'Warning: Overwriting old announcement (see last log above)'
+    robot.brain.set('pending', JSON.stringify(vars))
+    robot.messageRoom CONTROL_CHANNEL_NAME, "New notification pending. How's it look? (type `botgt notify approve` or `botgt notify abort`)"
+    robot.messageRoom CONTROL_CHANNEL_NAME, configToLog(logDict)
+    robot.brain.set('sender', res.message.user.name)
+
   robot.respond /notify hackers (.*)/i, (res) ->
-    # Initialize buildgt config
+    # Initialize hackers config
     vars = {
       msg: res.match[1],
       plugins: {
@@ -126,6 +173,10 @@ e.g. --message Hello World --channel general tech --> "Hello World" used as --me
       }
     }
 
+    logDict = {
+      msg: vars.msg,
+      mediums: ['slack', 'twitter', 'live_site']
+    }
     # Grafana vars
     grafana(res, ['twitter', 'live_site', 'slack'], vars.msg)
 
@@ -134,8 +185,8 @@ e.g. --message Hello World --channel general tech --> "Hello World" used as --me
       doFail "Please supply a message.", res
       return
 
-    # Do the request
-    doRequest(vars, res)
+    robot.messageRoom CONTROL_CHANNEL_NAME, "[Hackers Preset]"
+    requestApproval(vars, logDict, res)
 
   robot.respond /notify (.*)/i, (res) ->
 
@@ -163,12 +214,11 @@ e.g. --message Hello World --channel general tech --> "Hello World" used as --me
         groups: []
       }
     }
-    foundChannels = false
-    foundMediums = false
 
     # Iterate through tokens to parse query for channels/mediums/message    
     activeOption = null
     aggregateList = []
+    logDict = {}
     tokens.push('--end') # End flag to simplify parsing, ensure final option list get parsed
     for token in tokens
       if token.length > 1 && token.substr(0, 2) == "--"
@@ -181,12 +231,16 @@ e.g. --message Hello World --channel general tech --> "Hello World" used as --me
             switch activeOption
               when 'message' 
                 vars.msg = aggregateList.join " "
+                logDict.msg = vars.msg
               when 'channel' # All channel consumers here
                 varsTemp.slack.channels = aggregateList
+                logDict.channels = aggregateList
               when 'group' # All group consumers here
                 varsTemp.twilio.groups = aggregateList
+                logDict.groups = aggregateList
               when 'medium'
                 mediums = aggregateList
+                logDict.mediums = aggregateList
           activeOption = optionStr
           aggregateList = []
       else
@@ -213,4 +267,5 @@ e.g. --message Hello World --channel general tech --> "Hello World" used as --me
       # Add necessary configurations to vars
       vars.plugins[medium] = varsTemp[medium]
 
-    doRequest(vars, res)
+    requestApproval(vars, logDict, res)
+    
