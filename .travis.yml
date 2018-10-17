@@ -1,0 +1,21 @@
+dist: trusty
+language: ruby
+
+
+sudo: required
+services:
+  - docker
+
+
+script: |
+  .travis.d/build.sh &&
+  cd .travis.d &&
+  bundle install --gemfile=Gemfile --path vendor/bundle &&
+  BUNDLE_GEMFILE=Gemfile bundle exec ruby pr_autodeploy.rb
+
+env:
+  global:
+    - HACKGPROJECT_REV="7b050f5ce70b8f9d621d68e9245ec2401ab7899f"
+
+    - DOCKER_ID_USER="hackgt"
+
