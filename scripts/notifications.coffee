@@ -240,7 +240,7 @@ module.exports = (robot) ->
               when 'group' # All group consumers here
                 varsTemp.twilio.groups = aggregateList
                 logDict.groups = aggregateList
-              when 'medium'
+              when 'mediums'
                 mediums = aggregateList
                 logDict.mediums = aggregateList
           activeOption = optionStr
