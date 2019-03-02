@@ -42,7 +42,7 @@ GRAFANA = {
 
 PRESETS = ['hackers', 'mediums', 'help', 'approve', 'abort']
 
-CONTROL_CHANNEL_NAME = '#hackgt5_announcements'
+CONTROL_CHANNEL_NAME = 'event-announcements'
 
 HELP_STR = """Available options: [channel, group, medium, message]
 --channel: For slack/channel based notifiers, name of the channels you want to notify
@@ -240,7 +240,7 @@ module.exports = (robot) ->
               when 'group' # All group consumers here
                 varsTemp.twilio.groups = aggregateList
                 logDict.groups = aggregateList
-              when 'mediums'
+              when 'medium'
                 mediums = aggregateList
                 logDict.mediums = aggregateList
           activeOption = optionStr
@@ -250,7 +250,6 @@ module.exports = (robot) ->
           doFail "Floating arguments.", res
           return
         aggregateList.push token
-      
     # Log for Grafana
     grafana(res, mediums, vars.msg)
 
