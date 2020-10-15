@@ -7,7 +7,7 @@
 module.exports = (robot) ->
     robot.respond /countdown/i, (res) ->
         now = new Date()
-        eventTime = new Date("2020-10-16T17:00:00Z")
+        eventTime = new Date("2020-10-16T21:00:00Z")
         delta = Math.abs(eventTime.getTime() - now.getTime())/1000
         days = Math.floor(delta / 86400);
         delta -= days * 86400;
